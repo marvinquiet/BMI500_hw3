@@ -1,4 +1,7 @@
+# do not upload data
 FC_data_LRcell.RDS
 FC_cells_annot.RDS
 sampled_FC_data.csv
 sampled_FC_annot.csv
+FC_celltypes.csv
+mouse_celltypes.rda
