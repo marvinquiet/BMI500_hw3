@@ -1,1 +1,4 @@
-F_GRCm38.81.P60Cortex_noRep5_FRONTALonly.raw.dge.txt.gz
+FC_data_LRcell.RDS
+FC_cells_annot.RDS
+sampled_FC_data.csv
+sampled_FC_annot.csv
