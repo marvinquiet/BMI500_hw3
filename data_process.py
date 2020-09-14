@@ -5,26 +5,54 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 sns.set()
 
-from sklearn.cluster import KMeans
-
-
 class My_KMeans:
     '''Implement KMeans on my own
     '''
-    def __init__(self, K = 7, max_iter=1000, tol=1e-05):
+    def __init__(self, K = 7, max_iter=1000, tol=1e-05, random_state=2020):
         self.K = K
         self.max_iter = max_iter
         self.tol = tol
+        self.random_state = random_state
 
-    def distance(a, b, method = "Euclidean"):
+    def distance(self, a, b, method = "Euclidean"):
         if method == "Euclidean":
-            return np.linalg.norm(a-b)
+            return np.linalg.norm(a-b, axis=0)
 
-    def fit(X):
-        # initialize centroids
+    def fit(self, X):
+        nrow = X.shape[0]
 
+        # initialize centroids (random choose)
+        self.centroids = X.sample(self.K, random_state=self.random_state)
+        self.centroids.reset_index(drop=True, inplace=True) # remove index
 
+        iter_n = 0
+        tol_n = 1e5
+        while iter_n < self.max_iter and tol_n > self.tol: # threshold for stopping criteria
+            # initialize labels
+            self.labels = [0] * nrow
 
+            for i in range(nrow):
+                data_i = X.iloc[i, ]
+
+                min_dist = np.Inf
+                for k in range(self.centroids.shape[0]):
+                    centroid = self.centroids.iloc[k, ]
+                    dist_centroid = self.distance(centroid, data_i)
+
+                    if dist_centroid < min_dist: # if the minimum, change the labels
+                        min_dist = dist_centroid
+                        self.labels[i] = k
+
+            tmp_centroids = self.centroids.copy() # mark for calculating the difference
+            for label in range(self.K):
+                rows = [i for i, value in enumerate(self.labels) if self.labels[i] == label]
+                avg_centroid = np.average(X.iloc[rows, ], axis=0) # get the new centroid
+                self.centroids.loc[label] = avg_centroid
+
+            tol_n = sum(self.distance(tmp_centroids, self.centroids)) # calculate differencen between two centroids
+            print("iter:", iter_n, "diff:", tol_n)
+
+            iter_n += 1
 
 
 if __name__ == "__main__":
@@ -53,15 +81,19 @@ if __name__ == "__main__":
     embedding = reducer.fit_transform(data.T)
 
     # original cell-type annotation
-    ori_scatter = plt.scatter(embedding[:, 0], embedding[:, 1], c=[celltype_color[l] for l in celltype_list], s=1)
-    plt.legend(handles=ori_scatter.legend_elements()[0], labels=celltype_color.keys())
+    plt.scatter(embedding[:, 0], embedding[:, 1], c=[celltype_color[l] for l in celltype_list], s=1)
 
     sub_celltypes = pd.read_csv("FC_celltypes.csv", header=0, index_col=0) # sub-cell type file
 
-    # try sklearn's Kmeans on pre-defined 9 clusters
-    kmeans = KMeans(n_clusters=9, random_state=2020).fit(data.T)
-    plt.scatter(embedding[:, 0], embedding[:, 1], c=[list(celltype_color.values())[kl] for kl in kmeans.labels_], s=1)
+    # from sklearn.cluster import KMeans
+    # # try sklearn's Kmeans on pre-defined 9 clusters
+    # kmeans = KMeans(n_clusters=9, random_state=2020).fit(data.T)
+    # plt.scatter(embedding[:, 0], embedding[:, 1], c=[list(celltype_color.values())[kl] for kl in kmeans.labels_], s=1)
 
+    # try my KMeans
+    my_kmeans = My_KMeans(K=9, random_state=2020)
+    my_kmeans.fit(data.T)
+    plt.scatter(embedding[:, 0], embedding[:, 1], c=[list(celltype_color.values())[kl] for kl in my_kmeans.labels], s=1)
 
-
-
+    my_kmeans_embed = My_KMeans(K=9, random_state=2020).fit(embedding)
+    plt.scatter(embedding[:, 0], embedding[:, 1], c=[list(celltype_color.values())[kl] for kl in my_kmeans_embed.labels], s=1)
