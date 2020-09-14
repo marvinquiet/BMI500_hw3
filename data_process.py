@@ -8,21 +8,30 @@ sns.set()
 class My_KMeans:
     '''Implement KMeans on my own
     '''
-    def __init__(self, K = 7, max_iter=1000, tol=1e-05, random_state=2020):
+    def __init__(self, K = 7, max_iter=1000, tol=1e-04, random_state=2020,
+            method="Euclidean"):
         self.K = K
         self.max_iter = max_iter
         self.tol = tol
         self.random_state = random_state
+        self.method = method
 
-    def distance(self, a, b, method = "Euclidean"):
-        if method == "Euclidean":
+    def distance(self, a, b):
+        if self.method == "Euclidean":
             return np.linalg.norm(a-b, axis=0)
+        elif self.method == "Manhattan":
+            return np.sum(np.abs(a-b), axis=0)
 
     def fit(self, X):
+        X = pd.DataFrame(X) # turn into pandas dataframe in case numpy array
+
         nrow = X.shape[0]
+        # np.random.seed(self.random_state)
+        # self.centroids = X.iloc[np.random.randint(nrow, size=self.K), ]
 
         # initialize centroids (random choose)
         self.centroids = X.sample(self.K, random_state=self.random_state)
+        # self.centroids = X.iloc[np.random.randint(nrow, size=self.K), ]
         self.centroids.reset_index(drop=True, inplace=True) # remove index
 
         iter_n = 0
@@ -77,23 +86,34 @@ if __name__ == "__main__":
 
     # for visualizing
     import umap
-    reducer = umap.UMAP()
+    reducer = umap.UMAP(random_state=2020)
     embedding = reducer.fit_transform(data.T)
 
     # original cell-type annotation
     plt.scatter(embedding[:, 0], embedding[:, 1], c=[celltype_color[l] for l in celltype_list], s=1)
+    plt.savefig("golden_standard.png", )
 
     sub_celltypes = pd.read_csv("FC_celltypes.csv", header=0, index_col=0) # sub-cell type file
 
-    # from sklearn.cluster import KMeans
+    from sklearn.cluster import KMeans
     # # try sklearn's Kmeans on pre-defined 9 clusters
     # kmeans = KMeans(n_clusters=9, random_state=2020).fit(data.T)
     # plt.scatter(embedding[:, 0], embedding[:, 1], c=[list(celltype_color.values())[kl] for kl in kmeans.labels_], s=1)
+    # plt.savefig("scikitlearn_kmeans_ori_data.png")
 
     # try my KMeans
-    my_kmeans = My_KMeans(K=9, random_state=2020)
+    # my_kmeans = My_KMeans(K=9, random_state=2020)
+    # my_kmeans.fit(data.T)
+    # plt.scatter(embedding[:, 0], embedding[:, 1], c=[list(celltype_color.values())[kl] for kl in my_kmeans.labels], s=1)
+    # plt.savefig("my_kmeans_ori_data.png")
+
+    my_kmeans = My_KMeans(K=9, random_state=2020, method="Manhattan")
     my_kmeans.fit(data.T)
     plt.scatter(embedding[:, 0], embedding[:, 1], c=[list(celltype_color.values())[kl] for kl in my_kmeans.labels], s=1)
+    plt.savefig("my_kmeans_ori_data_manhattan.png")
 
-    my_kmeans_embed = My_KMeans(K=9, random_state=2020).fit(embedding)
-    plt.scatter(embedding[:, 0], embedding[:, 1], c=[list(celltype_color.values())[kl] for kl in my_kmeans_embed.labels], s=1)
+
+    # my_kmeans_embed = My_KMeans(K=9, random_state=2020)
+    # my_kmeans_embed.fit(embedding)
+    # plt.scatter(embedding[:, 0], embedding[:, 1], c=[list(celltype_color.values())[kl] for kl in my_kmeans_embed.labels], s=1)
+    # plt.savefig("my_kmeans_embedding.png")
