@@ -5,3 +5,6 @@ sampled_FC_data.csv
 sampled_FC_annot.csv
 FC_celltypes.csv
 mouse_celltypes.rda
+
+# OS system
+.DS_Store

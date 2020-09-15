@@ -69,9 +69,10 @@ class My_KMeans:
 
 def gene_selection(data):
     count_nonzeros = (data!=0).sum(axis=1)
-    genes = count_nonzeros[count_nonzeros > 1200].index.tolist()
+    genes = count_nonzeros[count_nonzeros > 2000].index.tolist()
     filtere_data = data.loc[genes, ]
     return filtere_data
+
 
 if __name__ == "__main__":
     # load in the data
@@ -99,43 +100,68 @@ if __name__ == "__main__":
     embedding = reducer.fit_transform(data.T)
 
     # original cell-type annotation
-    # plt.scatter(embedding[:, 0], embedding[:, 1], c=[celltype_color[l] for l in celltype_list], s=0.5)
-    # plt.savefig("golden_standard.png", )
-
-    # sub_celltypes = pd.read_csv("FC_celltypes.csv", header=0, index_col=0) # sub-cell type file
+    # handles_list = []
+    # for celltype, color in celltype_color.items():
+    #     indices = [i for i, x in enumerate(celltype_list) if x == celltype]
+    #     handles = plt.scatter(embedding[indices, 0], embedding[indices, 1], c = color, s=0.5)
+    #     handles_list.append(handles)
+    # plt.title("Gold Standard Cell-type Annotation")
+    # plt.xlabel("UMAP1")
+    # plt.ylabel("UMAP2")
+    # plt.legend(handles_list, celltype_color.keys())
+    # plt.savefig("golden_standard.png")
+    # plt.clf()
 
     from sklearn.cluster import KMeans
     # try sklearn's Kmeans on pre-defined 9 clusters
+    start_time = time.time()
+    kmeans = KMeans(n_clusters=9, random_state=2020).fit(data.T)
+    print("sklearn KMeans: ", time.time()-start_time)
 
-    # start_time = time.time()
-    # kmeans = KMeans(n_clusters=9, random_state=2020).fit(data.T)
-    # print("sklearn KMeans: ", time.time()-start_time)
-
-    # plt.scatter(embedding[:, 0], embedding[:, 1], c=[list(celltype_color.values())[kl] for kl in kmeans.labels_], s=0.5)
-    # plt.savefig("scikitlearn_kmeans_ori_data.png")
+    plt.scatter(embedding[:, 0], embedding[:, 1], c=[list(celltype_color.values())[kl] for kl in kmeans.labels_], s=0.5)
+    plt.title("Sklearn KMeans Clustering Result")
+    plt.xlabel("UMAP1")
+    plt.ylabel("UMAP2")
+    plt.savefig("scikitlearn_kmeans_ori_data.png")
+    plt.clf()
 
     # try my KMeans
-    # start_time = time.time()
-    # my_kmeans = My_KMeans(K=9, random_state=2020)
-    # my_kmeans.fit(data.T)
-    # print("My KMeans: ", time.time()-start_time)
+    start_time = time.time()
+    my_kmeans = My_KMeans(K=9, random_state=2020)
+    my_kmeans.fit(data.T)
+    print("My KMeans: ", time.time()-start_time)
 
-    # plt.scatter(embedding[:, 0], embedding[:, 1], c=[list(celltype_color.values())[kl] for kl in my_kmeans.labels], s=0.5)
-    # plt.savefig("my_kmeans_ori_data.png")
+    plt.scatter(embedding[:, 0], embedding[:, 1], c=[list(celltype_color.values())[kl] for kl in my_kmeans.labels], s=0.5)
+    plt.title("My KMeans Clustering Result")
+    plt.xlabel("UMAP1")
+    plt.ylabel("UMAP2")
+    plt.savefig("my_kmeans_ori_data.png")
+    plt.clf()
 
-    # start_time = time.time()
-    # my_kmeans = My_KMeans(K=9, random_state=2020, method="Manhattan")
-    # my_kmeans.fit(data.T)
-    # print("My KMeans mahattan: ", time.time()-start_time)
+    euclidean_tols = my_kmeans.tols
+    plt.plot(list(range(len(euclidean_tols))), euclidean_tols, linewidth=2.0)
+    plt.title("Tolerance of self-implemented KMeans (Euclidean distance)")
+    plt.xlabel("iterations")
+    plt.ylabel("Euclidean distance")
+    plt.savefig("mykmeans_tol_euclidean.png")
+    plt.clf()
+
+    start_time = time.time()
+    my_kmeans = My_KMeans(K=9, random_state=2020, method="Manhattan")
+    my_kmeans.fit(data.T)
+    print("My KMeans mahattan: ", time.time()-start_time)
     # plt.scatter(embedding[:, 0], embedding[:, 1], c=[list(celltype_color.values())[kl] for kl in my_kmeans.labels], s=0.5)
     # plt.savefig("my_kmeans_ori_data_manhattan.png")
 
-    # my_kmeans_embed = My_KMeans(K=9, random_state=2020)
-    # my_kmeans_embed.fit(embedding)
-    # plt.scatter(embedding[:, 0], embedding[:, 1], c=[list(celltype_color.values())[kl] for kl in my_kmeans_embed.labels], s=0.5)
-    # plt.savefig("my_kmeans_embedding.png")
+    manhattan_tols = my_kmeans.tols
+    plt.plot(list(range(len(manhattan_tols))), manhattan_tols, linewidth=2.0)
+    plt.title("Tolerance of self-implemented KMeans (Manhattan distance)")
+    plt.xlabel("iterations")
+    plt.ylabel("Manhattan distance")
+    plt.savefig("mykmeans_tol_manhattan.png")
+    plt.clf()
 
-    # gene selection
+    # === gene selection
     filtered_data = gene_selection(data)
     # try my KMeans
     start_time = time.time()
@@ -144,20 +170,21 @@ if __name__ == "__main__":
     print("My KMeans: ", time.time()-start_time)
 
     plt.scatter(embedding[:, 0], embedding[:, 1], c=[list(celltype_color.values())[kl] for kl in my_kmeans.labels], s=0.5)
+    plt.title("KMeans on Selected Genes")
+    plt.xlabel("UMAP1")
+    plt.ylabel("UMAP2")
     plt.savefig("my_kmeans_30per_data.png")
+    plt.clf()
 
-    start_time = time.time()
-    my_kmeans = My_KMeans(K=9, random_state=2020, method="Manhattan")
-    my_kmeans.fit(filtered_data.T)
-    print("My KMeans mahattan: ", time.time()-start_time)
-    plt.scatter(embedding[:, 0], embedding[:, 1], c=[list(celltype_color.values())[kl] for kl in my_kmeans.labels], s=0.5)
-    plt.savefig("my_kmeans_30per_manhattan.png")
-
-    # PCA projection
+    # === PCA projection
     from sklearn.decomposition import PCA
-    pca = PCA(n_components=15)
+    pca = PCA(n_components=15, random_state=2020)
     pca.fit(data)
     my_kmeans = My_KMeans(K=9, random_state=2020, method="Euclidean")
     my_kmeans.fit(pca.components_.T)
     plt.scatter(embedding[:, 0], embedding[:, 1], c=[list(celltype_color.values())[kl] for kl in my_kmeans.labels], s=0.5)
+    plt.title("KMeans on PCA Projection")
+    plt.xlabel("UMAP1")
+    plt.ylabel("UMAP2")
     plt.savefig("my_kmeans_pca.png")
+    plt.clf()
