@@ -1,4 +1,4 @@
-import os
+import os, time
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -36,6 +36,8 @@ class My_KMeans:
 
         iter_n = 0
         tol_n = 1e5
+
+        self.tols = []
         while iter_n < self.max_iter and tol_n > self.tol: # threshold for stopping criteria
             # initialize labels
             self.labels = [0] * nrow
@@ -59,10 +61,17 @@ class My_KMeans:
                 self.centroids.loc[label] = avg_centroid
 
             tol_n = sum(self.distance(tmp_centroids, self.centroids)) # calculate differencen between two centroids
-            print("iter:", iter_n, "diff:", tol_n)
+            # for plotting
+            self.tols.append(tol_n)
+            # print("iter:", iter_n, "diff:", tol_n)
 
             iter_n += 1
 
+def gene_selection(data):
+    count_nonzeros = (data!=0).sum(axis=1)
+    genes = count_nonzeros[count_nonzeros > 1200].index.tolist()
+    filtere_data = data.loc[genes, ]
+    return filtere_data
 
 if __name__ == "__main__":
     # load in the data
@@ -90,30 +99,65 @@ if __name__ == "__main__":
     embedding = reducer.fit_transform(data.T)
 
     # original cell-type annotation
-    plt.scatter(embedding[:, 0], embedding[:, 1], c=[celltype_color[l] for l in celltype_list], s=1)
-    plt.savefig("golden_standard.png", )
+    # plt.scatter(embedding[:, 0], embedding[:, 1], c=[celltype_color[l] for l in celltype_list], s=0.5)
+    # plt.savefig("golden_standard.png", )
 
-    sub_celltypes = pd.read_csv("FC_celltypes.csv", header=0, index_col=0) # sub-cell type file
+    # sub_celltypes = pd.read_csv("FC_celltypes.csv", header=0, index_col=0) # sub-cell type file
 
     from sklearn.cluster import KMeans
-    # # try sklearn's Kmeans on pre-defined 9 clusters
+    # try sklearn's Kmeans on pre-defined 9 clusters
+
+    # start_time = time.time()
     # kmeans = KMeans(n_clusters=9, random_state=2020).fit(data.T)
-    # plt.scatter(embedding[:, 0], embedding[:, 1], c=[list(celltype_color.values())[kl] for kl in kmeans.labels_], s=1)
+    # print("sklearn KMeans: ", time.time()-start_time)
+
+    # plt.scatter(embedding[:, 0], embedding[:, 1], c=[list(celltype_color.values())[kl] for kl in kmeans.labels_], s=0.5)
     # plt.savefig("scikitlearn_kmeans_ori_data.png")
 
     # try my KMeans
+    # start_time = time.time()
     # my_kmeans = My_KMeans(K=9, random_state=2020)
     # my_kmeans.fit(data.T)
-    # plt.scatter(embedding[:, 0], embedding[:, 1], c=[list(celltype_color.values())[kl] for kl in my_kmeans.labels], s=1)
+    # print("My KMeans: ", time.time()-start_time)
+
+    # plt.scatter(embedding[:, 0], embedding[:, 1], c=[list(celltype_color.values())[kl] for kl in my_kmeans.labels], s=0.5)
     # plt.savefig("my_kmeans_ori_data.png")
 
-    my_kmeans = My_KMeans(K=9, random_state=2020, method="Manhattan")
-    my_kmeans.fit(data.T)
-    plt.scatter(embedding[:, 0], embedding[:, 1], c=[list(celltype_color.values())[kl] for kl in my_kmeans.labels], s=1)
-    plt.savefig("my_kmeans_ori_data_manhattan.png")
-
+    # start_time = time.time()
+    # my_kmeans = My_KMeans(K=9, random_state=2020, method="Manhattan")
+    # my_kmeans.fit(data.T)
+    # print("My KMeans mahattan: ", time.time()-start_time)
+    # plt.scatter(embedding[:, 0], embedding[:, 1], c=[list(celltype_color.values())[kl] for kl in my_kmeans.labels], s=0.5)
+    # plt.savefig("my_kmeans_ori_data_manhattan.png")
 
     # my_kmeans_embed = My_KMeans(K=9, random_state=2020)
     # my_kmeans_embed.fit(embedding)
-    # plt.scatter(embedding[:, 0], embedding[:, 1], c=[list(celltype_color.values())[kl] for kl in my_kmeans_embed.labels], s=1)
+    # plt.scatter(embedding[:, 0], embedding[:, 1], c=[list(celltype_color.values())[kl] for kl in my_kmeans_embed.labels], s=0.5)
     # plt.savefig("my_kmeans_embedding.png")
+
+    # gene selection
+    filtered_data = gene_selection(data)
+    # try my KMeans
+    start_time = time.time()
+    my_kmeans = My_KMeans(K=9, random_state=2020)
+    my_kmeans.fit(filtered_data.T)
+    print("My KMeans: ", time.time()-start_time)
+
+    plt.scatter(embedding[:, 0], embedding[:, 1], c=[list(celltype_color.values())[kl] for kl in my_kmeans.labels], s=0.5)
+    plt.savefig("my_kmeans_30per_data.png")
+
+    start_time = time.time()
+    my_kmeans = My_KMeans(K=9, random_state=2020, method="Manhattan")
+    my_kmeans.fit(filtered_data.T)
+    print("My KMeans mahattan: ", time.time()-start_time)
+    plt.scatter(embedding[:, 0], embedding[:, 1], c=[list(celltype_color.values())[kl] for kl in my_kmeans.labels], s=0.5)
+    plt.savefig("my_kmeans_30per_manhattan.png")
+
+    # PCA projection
+    from sklearn.decomposition import PCA
+    pca = PCA(n_components=15)
+    pca.fit(data)
+    my_kmeans = My_KMeans(K=9, random_state=2020, method="Euclidean")
+    my_kmeans.fit(pca.components_.T)
+    plt.scatter(embedding[:, 0], embedding[:, 1], c=[list(celltype_color.values())[kl] for kl in my_kmeans.labels], s=0.5)
+    plt.savefig("my_kmeans_pca.png")
